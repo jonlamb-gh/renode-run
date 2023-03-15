@@ -76,7 +76,7 @@ impl RenodeCliConfig {
 #[derive(Clone, Debug, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
 pub struct AppConfig {
-    // TODO not used atm
+    // TODO use these
     pub use_relative_paths: bool,
     pub resc_file_name: Option<String>,
     pub disable_envsub: bool,
@@ -84,4 +84,5 @@ pub struct AppConfig {
     pub omit_start: bool,
     pub environment_variables: Vec<(String, String)>,
     pub renode: Option<String>,
+    pub omit_out_dir_path: bool,
 }

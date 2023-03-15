@@ -85,7 +85,9 @@ fn main() {
 
     let mut output_file = std::fs::File::create(&output_file_path).unwrap();
     let resc_gen = RescGen::new(&mut output_file);
-    resc_gen.generate(&renode_config.app, &resc_def).unwrap();
+    resc_gen
+        .generate(&output_dir, &renode_config.app, &resc_def)
+        .unwrap();
     output_file.sync_all().unwrap();
     drop(output_file);
 

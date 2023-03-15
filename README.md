@@ -6,28 +6,84 @@ A custom Cargo runner that runs Rust firmware in the [renode] emulator.
 
 * Acts as a Cargo runner, integrating into `cargo run`.
 * Exposes all of [renode]'s scripting facilities and CLI as configuration in your `Cargo.toml`.
-* Provides configuration for the environment, allowing you to perform environment substitution on
-  nearly everything.
-
-## TODOs/ideas
-
-* uses/sets cargo env vars where possible/sensible: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
-* add/manage renode's PATH env
-* maybe manages downloading renode portable linux package
-* runner bin has opts with env var overrides for config things
-* toml table supports `variants`, allows multiple configs
-  - one for test, has uart hooks for test runner output, panic, etc
-  - another for normal app stuff
+* Provides configuration for the environment, allowing you to perform environment variable
+  substitution on nearly everything.
 
 ## Installation
 
 To install `renode-run`, use `cargo install renode-run`.
 
-## TODO Setup
+## Setup
 
-## TODO Configuration
+**NOTE** Requires [renode] to be installed on the host system.
 
-## TODO Examples
+### 1. Set the Cargo runner
+
+Set `renode-run` as your Cargo runner (`.cargo/config.toml`).
+
+``` toml
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+runner = "renode-run"
+```
+
+### 2. Run
+
+You can now run your firmware using `cargo run`.
+
+## Configuration
+
+### `[package.metadata.renode]` options
+
+**NOTE** Many of these can be overridden by CLI options. Nearly every field supports environment variable substitution.
+
+Fields pertaining the `resc` script generation:
+- **name**: The name field used in the generated `resc` script.
+  If not present, the name of the crate is used or a default name is provided.
+- **description**: The description field used in the generated `resc` script.
+  If not present, the description of the crate is used or a default description is provided.
+- **machine-name**: The machine's name.
+- **init-commands**: An array of commands ran after the machine is created and before variables are declared.
+- **variables**: An array of variable declarations.
+  `renode-run` will automatically insert `$bin = @target/<profile>/<bin>` as provided by Cargo.
+- **platform-description**: A single platform description.
+  Can be one of:
+    * a renode-provided `repl` file (starts with `@`)
+    * a local `repl` file (doesn't start with `@`)
+    * a local `repl` file that is to be imported and generated into the output directory (starts with `<`).
+      This is handy when you want to perform environment substitution on the contents of a `repl` file.
+    * a literal string
+- **platform-descriptions**: An array of platform descriptions.
+  Each entry can be one of:
+    * a renode-provided `repl` file (starts with `@`)
+    * a local `repl` file (doesn't start with `@`)
+    * a local `repl` file that is to be imported and generated into the output directory (starts with `<`).
+      This is handy when you want to perform environment substitution on the contents of a `repl` file.
+    * a literal string
+- **reset**: The reset macro definition. The default is `sysbus LoadELF $bin`.
+- **pre-start-commands**: An array of commands ran immediately before the `start` command.
+- **post-start-commands**: An array of commands ran immediately after the `start` command.
+
+Fields pertaining the behavior of `renode-run`:
+- **environment-variables**: An array of environment variables and values to set for both the `renode-run` and `renode` environment.
+- **renode**: The path to the `renode` binary to use. Defaults to using the system's `$PATH`.
+- **omit-start**: Don't generate a `start` command. Defaults to `false`.
+- **omit-out-dir-path**: Don't add the output directory to renode's path.
+- **resc-file-name**: The name of the generated `resc` script. Defaults to `emulate.resc`.
+- **use-relative-paths**: TBD
+- **disable-envsub**: TBD
+- **using-sysbus**: TBD
+
+Fields pertaining the invocation of `renode` itself:
+- **plain**: Adds `--plain` to the list of arguments given to `renode`.
+- **port**: Adds `--port <port>` to the list of arguments given to `renode`.
+- **disable-xwt**: Adds `--disable-xwt` to the list of arguments given to `renode`.
+- **hide-monitor**: Adds `--hide-monitor` to the list of arguments given to `renode`.
+- **hide-log**: Adds `--hide-log` to the list of arguments given to `renode`.
+- **hide-analyzers**: Adds `--hide-analyzers` to the list of arguments given to `renode`.
+- **console**: Adds `--console` to the list of arguments given to `renode`.
+- **keep-temporary-files**: Adds `--keep-temporary-files` to the list of arguments given to `renode`.
+
+## Example
 
 ```toml
 [package.metadata.renode]

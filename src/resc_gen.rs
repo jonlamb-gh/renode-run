@@ -1,6 +1,6 @@
 use crate::config::AppConfig;
 use crate::types::{PlatformDescriptionKind, RescDefinition};
-use std::io::Write;
+use std::{fs, io::Write, path::Path};
 
 pub struct RescGen<'a, T: Write> {
     writer: &'a mut T,
@@ -12,15 +12,28 @@ impl<'a, T: Write> RescGen<'a, T> {
     }
 
     // TODO use Error type
-    pub fn generate(
+    pub fn generate<P: AsRef<Path>>(
         mut self,
+        output_dir: P,
         app: &AppConfig,
         resc: &RescDefinition,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        for p in resc.platform_descriptions.iter() {
+            if let PlatformDescriptionKind::GeneratedLocalFile(file_name) = p.kind() {
+                let out_path = output_dir.as_ref().join(file_name);
+                fs::write(out_path, p.content())?;
+            }
+        }
+
         let w = &mut self.writer;
         writeln!(w, ":name: {}", resc.name)?;
         writeln!(w, ":description: {}", resc.description)?;
         writeln!(w)?;
+
+        if !app.omit_out_dir_path {
+            writeln!(w, "path add @{}", output_dir.as_ref().display())?;
+            writeln!(w)?;
+        }
 
         if app.using_sysbus {
             writeln!(w, "using sysbus")?;
