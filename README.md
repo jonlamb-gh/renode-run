@@ -1,4 +1,4 @@
-# renode-run
+# renode-run &emsp; ![ci] [![crates.io]](https://crates.io/crates/renode-run)
 
 A custom Cargo runner that runs Rust firmware in the [renode] emulator.
 
@@ -165,4 +165,6 @@ Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 licensed as above, without any additional terms or conditions.
 
+[ci]: https://github.com/jonlamb-gh/renode-run/workflows/CI/badge.svg
+[crates.io]: https://img.shields.io/crates/v/renode-run.svg
 [renode]: https://renode.io/
