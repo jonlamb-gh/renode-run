@@ -1,11 +1,12 @@
 use crate::config::{AppConfig, RenodeScriptConfig};
 use crate::envsub::{envsub, EnvSubError};
 use derive_more::{AsRef, Deref, Display, Into};
-use std::path::Path;
+use std::{fs, path::Path};
 use unindent::unindent;
 
-const RESC_PATH_PREFIX: char = '@';
 const REPL_FILE_EXT: &str = "repl";
+const RESC_PATH_PREFIX: char = '@';
+const IMPORT_PATH_PREFIX: char = '<';
 
 #[derive(Clone, Debug)]
 pub struct RescDefinition {
@@ -46,13 +47,16 @@ impl RescDefinition {
             ));
         }
 
-        if resc.platform_descriptions.is_empty() {
-            return Err(RescDefinitionError::MissingPlatformDescription);
-        }
-
         let mut platform_descriptions = Vec::new();
+        if let Some(p) = resc.platform_description.as_ref() {
+            platform_descriptions.push(PlatformDescription::new(p.as_str())?);
+        }
         for p in resc.platform_descriptions.iter() {
             platform_descriptions.push(PlatformDescription::new(p.as_str())?);
+        }
+
+        if platform_descriptions.is_empty() {
+            return Err(RescDefinitionError::MissingPlatformDescription);
         }
 
         let mut variables = Vec::new();
@@ -114,15 +118,22 @@ impl RescDefinition {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display)]
 pub enum PlatformDescriptionKind {
-    /// A platform 'repl' file provided by Renode (begins with '@')
+    /// A platform 'repl' file provided by Renode (begins with '@').
     #[display(fmt = "renode-platform")]
     Internal,
-    /// A local 'repl' file
+    /// A local 'repl' file (doesn't begin with '@').
+    /// Supports environment substitution in the file path.
     #[display(fmt = "local-platform")]
     LocalFile,
-    /// A string containing a platform description
+    /// A local 'repl' file that is to be imported and generated into the output directory.
+    /// The path begins with '<', the file name is provided in the data.
+    /// Supports environment substitution in the file path and content.
+    #[display(fmt = "local-imported-platform")]
+    GeneratedLocalFile(String),
+    /// A string containing a platform description.
+    /// Supports environment substitution in the content.
     #[display(fmt = "platform")]
     String,
 }
@@ -140,19 +151,24 @@ pub enum PlatformDescriptionError {
     Emtpy,
     #[error("The local platform description file '{_0}' could not be found")]
     LocalFileNotFound(String),
+    #[error("Encountered an IO error while reading the local file '{_0}'. {_1}")]
+    Io(String, String),
+    #[error("Could not determine a file name for local file '{_0}'")]
+    FileName(String),
     #[error(transparent)]
     EnvSub(#[from] EnvSubError),
 }
 
 impl PlatformDescription {
-    pub fn new(desc: &str) -> Result<Self, PlatformDescriptionError> {
-        // TODO
-        let desc = unindent(desc.trim());
-        let desc = &desc;
+    pub fn new(desc_from_config: &str) -> Result<Self, PlatformDescriptionError> {
+        // TODO - indentation stuff will depend on kind
+        let unindented_desc = unindent(desc_from_config.trim());
+        let desc = unindented_desc.as_str();
 
         // Heuristic to see if this is a local repl file for desc string
         let num_lines = desc.lines().count();
         let ends_with_repl = desc.ends_with(REPL_FILE_EXT);
+        let begins_with_import = desc.starts_with(IMPORT_PATH_PREFIX);
 
         if desc.is_empty() {
             Err(PlatformDescriptionError::Emtpy)
@@ -161,11 +177,8 @@ impl PlatformDescription {
                 content: desc.to_owned(),
                 kind: PlatformDescriptionKind::Internal,
             })
-        } else if num_lines == 1 && ends_with_repl {
+        } else if num_lines == 1 && !begins_with_import && ends_with_repl {
             let local_path = envsub(desc)?;
-            // TODO
-            // - deal with relative vs absolute paths, make everything absolute
-            // - deal with '@' RESC_PATH_PREFIX on relative and absolute paths
             if Path::new(&local_path).exists() {
                 Ok(PlatformDescription {
                     content: local_path,
@@ -174,8 +187,33 @@ impl PlatformDescription {
             } else {
                 Err(PlatformDescriptionError::LocalFileNotFound(local_path))
             }
+        } else if num_lines == 1 && begins_with_import && ends_with_repl {
+            let prefix_removed = desc.trim_start_matches(IMPORT_PATH_PREFIX);
+            let local_path = envsub(prefix_removed.trim())?;
+            let p = Path::new(&local_path);
+            if !p.exists() {
+                return Err(PlatformDescriptionError::LocalFileNotFound(local_path));
+            }
+            let file_name = p
+                .file_name()
+                .and_then(|n| n.to_str())
+                .ok_or_else(|| PlatformDescriptionError::FileName(local_path.clone()))?;
+            let content =
+                envsub(&fs::read_to_string(p).map_err(|e| {
+                    PlatformDescriptionError::Io(local_path.clone(), e.to_string())
+                })?)?;
+            Ok(PlatformDescription {
+                content,
+                kind: PlatformDescriptionKind::GeneratedLocalFile(file_name.to_owned()),
+            })
         } else {
-            let content = envsub(desc)?;
+            // TODO - indentation logic needs improved
+            let raw_content = envsub(desc)?;
+            let content = if !raw_content.starts_with("using") {
+                indent::indent_by(4, &raw_content)
+            } else {
+                raw_content
+            };
             Ok(PlatformDescription {
                 content,
                 kind: PlatformDescriptionKind::String,
@@ -187,16 +225,20 @@ impl PlatformDescription {
         &self.content
     }
 
-    pub fn kind(&self) -> PlatformDescriptionKind {
-        self.kind
+    pub fn kind(&self) -> &PlatformDescriptionKind {
+        &self.kind
     }
 
     pub(crate) fn resc_fmt(&self) -> String {
         match self.kind() {
-            PlatformDescriptionKind::Internal | PlatformDescriptionKind::LocalFile => {
-                self.content().to_owned()
+            PlatformDescriptionKind::Internal => self.content().to_owned(),
+            PlatformDescriptionKind::LocalFile => {
+                format!("@{}", self.content())
             }
-            PlatformDescriptionKind::String => indent::indent_by(4, self.content()),
+            PlatformDescriptionKind::GeneratedLocalFile(file_name) => {
+                format!("@{}", file_name)
+            }
+            PlatformDescriptionKind::String => self.content.to_owned(),
         }
     }
 }

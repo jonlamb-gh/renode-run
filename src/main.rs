@@ -1,7 +1,7 @@
 use crate::config::RenodeRunConfig;
 use crate::opts::Opts;
 use crate::resc_gen::RescGen;
-use crate::types::RescDefinition;
+use crate::types::{PlatformDescriptionKind, RescDefinition};
 use clap::Parser;
 use serde::Deserialize;
 use std::{
@@ -21,12 +21,7 @@ struct CargoPackageMetadata {
     pub renode: Option<RenodeRunConfig>,
 }
 
-// TODO
-// add Error type, use throughout
-// deal with trim on string newtypes, some require indentation management when printed/codegen'd
-// deal with dup's in vec's, maintain order
-
-// TODO error printing stuff
+// TODO error types and printing stuff
 fn main() {
     let opts = Opts::parse();
 
@@ -79,10 +74,16 @@ fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|| output_dir.join("emulate.resc"));
 
+    for p in resc_def.platform_descriptions.iter() {
+        if let PlatformDescriptionKind::GeneratedLocalFile(file_name) = p.kind() {
+            let out_path = output_dir.join(file_name);
+            fs::write(out_path, p.content()).unwrap();
+        }
+    }
+
     log::debug!("Using output script '{}'", output_file_path.display());
 
     let mut output_file = std::fs::File::create(&output_file_path).unwrap();
-
     let resc_gen = RescGen::new(&mut output_file);
     resc_gen.generate(&renode_config.app, &resc_def).unwrap();
     output_file.sync_all().unwrap();
@@ -105,15 +106,15 @@ fn main() {
         };
 
         log::debug!("Using renode bin '{}'", renode_bin.display());
+        let mut args = renode_config.cli.to_args();
+        args.insert(0, output_file_path.display().to_string());
         let mut child = Command::new(renode_bin)
-            .arg(output_file_path)
+            .args(args)
+            .envs(renode_config.app.environment_variables)
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .spawn()
             .expect("Failed to start renode process");
-        let exit_status = child.wait();
-        // TODO
-        // add env vars
-        // add renode options/args
+        let _exit_status = child.wait().unwrap();
     }
 }

@@ -45,7 +45,9 @@ impl<'a, T: Write> RescGen<'a, T> {
         for p in resc.platform_descriptions.iter() {
             let s = p.resc_fmt();
             match p.kind() {
-                PlatformDescriptionKind::Internal | PlatformDescriptionKind::LocalFile => {
+                PlatformDescriptionKind::Internal
+                | PlatformDescriptionKind::LocalFile
+                | PlatformDescriptionKind::GeneratedLocalFile(_) => {
                     writeln!(w, "machine LoadPlatformDescription {s}")?
                 }
                 PlatformDescriptionKind::String => writeln!(
