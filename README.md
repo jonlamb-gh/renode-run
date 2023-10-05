@@ -140,6 +140,10 @@ pre-start-commands = [
     ''',
     'emulation LogEthernetTraffic',
     'machine StartGdbServer 3333',
+    '''
+    sysbus.usart3 AddLineHook "PANIC" "Antmicro.Renode.Logging.Logger.Log(LogLevel.Error, line)"
+    sysbus.usart3 AddLineHook "test result: ok" "Antmicro.Renode.Emulator.Exit()"
+    ''',
 ]
 reset = '''
 sysbus LoadELF $bin
