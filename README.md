@@ -60,6 +60,7 @@ Fields pertaining the `resc` script generation:
       This is handy when you want to perform environment substitution on the contents of a `repl` file.
     * a literal string
 - **reset**: The reset macro definition. The default is `sysbus LoadELF $bin`.
+- **start**: The start command definition. The default is `start`.
 - **pre-start-commands**: An array of commands ran immediately before the `start` command.
 - **post-start-commands**: An array of commands ran immediately after the `start` command.
 

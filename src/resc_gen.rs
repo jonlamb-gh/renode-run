@@ -85,7 +85,8 @@ impl<'a, T: Write> RescGen<'a, T> {
         writeln!(w)?;
 
         if !app.omit_start {
-            writeln!(w, "start")?;
+            let start_cmd = resc.start.as_deref().unwrap_or("start");
+            writeln!(w, "{}", start_cmd)?;
             writeln!(w)?;
 
             for c in resc.post_start_commands.iter() {

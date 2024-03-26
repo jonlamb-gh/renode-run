@@ -17,6 +17,7 @@ pub struct RescDefinition {
     pub variables: Vec<Variable>,
     pub platform_descriptions: Vec<PlatformDescription>,
     pub reset: ResetMacro,
+    pub start: Option<String>,
     pub pre_start_commands: Vec<PreStartCommand>,
     pub post_start_commands: Vec<PostStartCommand>,
 }
@@ -104,6 +105,8 @@ impl RescDefinition {
             .map(|s| ResetMacro::new(s))
             .unwrap_or_else(|| Ok(ResetMacro::default()))?;
 
+        let start = resc.start.clone();
+
         Ok(RescDefinition {
             name,
             description,
@@ -112,6 +115,7 @@ impl RescDefinition {
             variables,
             platform_descriptions,
             reset,
+            start,
             pre_start_commands,
             post_start_commands,
         })

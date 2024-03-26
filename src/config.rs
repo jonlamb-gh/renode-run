@@ -24,6 +24,7 @@ pub struct RenodeScriptConfig {
     pub platform_description: Option<String>,
     pub platform_descriptions: Vec<String>,
     pub reset: Option<String>,
+    pub start: Option<String>,
     pub pre_start_commands: Vec<String>,
     pub post_start_commands: Vec<String>,
 }
