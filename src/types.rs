@@ -125,20 +125,20 @@ impl RescDefinition {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display)]
 pub enum PlatformDescriptionKind {
     /// A platform 'repl' file provided by Renode (begins with '@').
-    #[display(fmt = "renode-platform")]
+    #[display("renode-platform")]
     Internal,
     /// A local 'repl' file (doesn't begin with '@').
     /// Supports environment substitution in the file path.
-    #[display(fmt = "local-platform")]
+    #[display("local-platform")]
     LocalFile,
     /// A local 'repl' file that is to be imported and generated into the output directory.
     /// The path begins with '<', the file name is provided in the data.
     /// Supports environment substitution in the file path and content.
-    #[display(fmt = "local-imported-platform")]
+    #[display("local-imported-platform")]
     GeneratedLocalFile(String),
     /// A string containing a platform description.
     /// Supports environment substitution in the content.
-    #[display(fmt = "platform")]
+    #[display("platform")]
     String,
 }
 
