@@ -125,20 +125,20 @@ impl RescDefinition {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display)]
 pub enum PlatformDescriptionKind {
     /// A platform 'repl' file provided by Renode (begins with '@').
-    #[display(fmt = "renode-platform")]
+    #[display("renode-platform")]
     Internal,
     /// A local 'repl' file (doesn't begin with '@').
     /// Supports environment substitution in the file path.
-    #[display(fmt = "local-platform")]
+    #[display("local-platform")]
     LocalFile,
     /// A local 'repl' file that is to be imported and generated into the output directory.
     /// The path begins with '<', the file name is provided in the data.
     /// Supports environment substitution in the file path and content.
-    #[display(fmt = "local-imported-platform")]
+    #[display("local-imported-platform")]
     GeneratedLocalFile(String),
     /// A string containing a platform description.
     /// Supports environment substitution in the content.
-    #[display(fmt = "platform")]
+    #[display("platform")]
     String,
 }
 
@@ -152,7 +152,7 @@ pub struct PlatformDescription {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, thiserror::Error)]
 pub enum PlatformDescriptionError {
     #[error("The platform description is empty")]
-    Emtpy,
+    Empty,
     #[error("The local platform description file '{_0}' could not be found")]
     LocalFileNotFound(String),
     #[error("Encountered an IO error while reading the local file '{_0}'. {_1}")]
@@ -175,7 +175,7 @@ impl PlatformDescription {
         let begins_with_import = desc.starts_with(IMPORT_PATH_PREFIX);
 
         if desc.is_empty() {
-            Err(PlatformDescriptionError::Emtpy)
+            Err(PlatformDescriptionError::Empty)
         } else if desc.starts_with(RESC_PATH_PREFIX) && ends_with_repl {
             Ok(PlatformDescription {
                 content: desc.to_owned(),
@@ -253,7 +253,7 @@ impl PlatformDescription {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, thiserror::Error)]
 pub enum RescGenericFieldError {
     #[error("The field '{_0}' cannot contain an empty string")]
-    Emtpy(&'static str),
+    Empty(&'static str),
     #[error(transparent)]
     EnvSub(#[from] EnvSubError),
 }
@@ -265,7 +265,7 @@ impl Name {
     pub fn new(v: &str) -> Result<Self, RescGenericFieldError> {
         let s = envsub(v)?;
         if s.is_empty() {
-            Err(RescGenericFieldError::Emtpy("name"))
+            Err(RescGenericFieldError::Empty("name"))
         } else {
             Ok(Self(s))
         }
@@ -285,7 +285,7 @@ impl Description {
     pub fn new(v: &str) -> Result<Self, RescGenericFieldError> {
         let s = envsub(v)?;
         if s.is_empty() {
-            Err(RescGenericFieldError::Emtpy("description"))
+            Err(RescGenericFieldError::Empty("description"))
         } else {
             Ok(Self(s))
         }
@@ -305,7 +305,7 @@ impl MachineName {
     pub fn new(v: &str) -> Result<Self, RescGenericFieldError> {
         let s = envsub(v)?;
         if s.is_empty() {
-            Err(RescGenericFieldError::Emtpy("machine-name"))
+            Err(RescGenericFieldError::Empty("machine-name"))
         } else {
             Ok(Self(s))
         }
@@ -326,7 +326,7 @@ impl Variable {
         let v = unindent(v.trim());
         let s = envsub(&v)?;
         if s.is_empty() {
-            Err(RescGenericFieldError::Emtpy("variables"))
+            Err(RescGenericFieldError::Empty("variables"))
         } else {
             Ok(Self(s))
         }
@@ -346,7 +346,7 @@ impl ResetMacro {
         let v = unindent(v.trim());
         let s = envsub(&v)?;
         if s.is_empty() {
-            Err(RescGenericFieldError::Emtpy("reset-macro"))
+            Err(RescGenericFieldError::Empty("reset-macro"))
         } else {
             Ok(Self(s))
         }
@@ -371,7 +371,7 @@ impl InitCommand {
         let v = unindent(v.trim());
         let s = envsub(&v)?;
         if s.is_empty() {
-            Err(RescGenericFieldError::Emtpy("init-commands"))
+            Err(RescGenericFieldError::Empty("init-commands"))
         } else {
             Ok(Self(s))
         }
@@ -386,7 +386,7 @@ impl PreStartCommand {
         let v = unindent(v.trim());
         let s = envsub(&v)?;
         if s.is_empty() {
-            Err(RescGenericFieldError::Emtpy("pre-start-commands"))
+            Err(RescGenericFieldError::Empty("pre-start-commands"))
         } else {
             Ok(Self(s))
         }
@@ -401,7 +401,7 @@ impl PostStartCommand {
         let v = unindent(v.trim());
         let s = envsub(&v)?;
         if s.is_empty() {
-            Err(RescGenericFieldError::Emtpy("post-start-commands"))
+            Err(RescGenericFieldError::Empty("post-start-commands"))
         } else {
             Ok(Self(s))
         }
